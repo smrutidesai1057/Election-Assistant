@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER")
+  subscription  String    @default("FREE")
+  createdAt     DateTime  @default(now())
+  accounts      Account[]
+  sessions      Session[]
+  quizAttempts  QuizAttempt[]
+  checklistStatus UserChecklistStatus[]
+  simulatorSessions SimulatorSession[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  score     Int
+  total     Int
+  answers   Json
+  weakAreas String[]
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChecklistItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  order       Int      @default(0)
+  userStatuses UserChecklistStatus[]
+}
+
+model UserChecklistStatus {
+  id              String        @id @default(cuid())
+  userId          String
+  checklistItemId String
+  completed       Boolean       @default(false)
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  @@unique([userId, checklistItemId])
+}
+
+model ElectionTimeline {
+  id          String   @id @default(cuid())
+  title       String
+  date        String
+  description String
+  type        String
+  icon        String   @default("📋")
+  order       Int      @default(0)
+}
+
+model StateAlert {
+  id        String   @id @default(cuid())
+  state     String
+  alertText String
+  type      String   @default("INFO")
+  date      String
+  createdAt DateTime @default(now())
+}
+
+model SimulatorSession {
+  id        String   @id @default(cuid())
+  userId    String?
+  role      String
+  status    String   @default("IN_PROGRESS")
+  score     Int      @default(0)
+  createdAt DateTime @default(now())
+  decisions SimulatorDecision[]
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model SimulatorDecision {
+  id        String           @id @default(cuid())
+  sessionId String
+  step      Int
+  decision  String
+  session   SimulatorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
